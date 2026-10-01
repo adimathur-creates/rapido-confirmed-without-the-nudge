@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmed Without the Nudge</title>
+<meta name="description" content="Independent concept by Aditya Mathur: how Rapido's Customer Team can keep rides confirmed after the CCPA order banning pre-ride tips and top-up prompts, with a problem statement, metric, compliant booking flow, concept screens, a funnel calculator, experiments, SQL and a field research plan.">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1a1d23; --muted:#5b6270; --line:#e3e4e8;
+  --accent:#0f766e; --accent-soft:#e0f2ef; --good:#18794e; --good-soft:#e6f4ec;
+  --warn:#9a5b00; --warn-soft:#fbf1dd; --bad:#b42318; --bad-soft:#fdeceb;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1115; --surface:#171a21; --ink:#e8eaee; --muted:#9aa1ad; --line:#2a2f3a;
+    --accent:#5eead4; --accent-soft:#0f2a27; --good:#4cc38a; --good-soft:#12291e;
+    --warn:#e0a53c; --warn-soft:#2b2210; --bad:#f07167; --bad-soft:#2d1614;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1115; --surface:#171a21; --ink:#e8eaee; --muted:#9aa1ad; --line:#2a2f3a;
+  --accent:#5eead4; --accent-soft:#0f2a27; --good:#4cc38a; --good-soft:#12291e;
+  --warn:#e0a53c; --warn-soft:#2b2210; --bad:#f07167; --bad-soft:#2d1614;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;}
+.wrap{max-width:900px;margin:0 auto;padding:40px 16px 80px}
+.kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.15;margin:0 0 12px;letter-spacing:-.01em}
+h2{font-size:22px;margin:56px 0 12px;padding-top:8px;letter-spacing:-.005em}
+h3{font-size:17px;margin:28px 0 8px}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.lede{font-size:18px;color:var(--muted);margin-bottom:20px}
+.meta{font-size:14px;color:var(--muted);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0;margin:20px 0 28px;display:flex;flex-wrap:wrap;gap:6px 18px}
+.note{font-size:13px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.tldr{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card .label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.card p{margin:0;font-size:15px}
+ul,ol{padding-left:22px;margin:0 0 14px}
+li{margin:4px 0}
+.tbl{width:100%;overflow-x:auto;margin:10px 0 18px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap}
+.p-good{background:var(--good-soft);color:var(--good)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-acc{background:var(--accent-soft);color:var(--accent)}
+.flow{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.step{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.num{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:13px}
+.step p{margin:0;font-size:15px}
+.step .t{font-weight:600;margin-bottom:2px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.5;margin:8px 0 18px;white-space:pre}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+p code, li code, td code{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:5px}
+.grader{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+select,textarea,input[type=file]{width:100%;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+textarea{min-height:130px;resize:vertical}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button{font:inherit;font-size:14px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:999px;padding:6px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:#fff}
+:root[data-theme="dark"] button.primary{color:#0f1115}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.primary{color:#0f1115}}
+button:hover{opacity:.9}
+.case-box{font-size:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.case-box .msg{font-size:15px;margin-bottom:8px}
+.kv{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--muted);white-space:pre-wrap;word-break:break-word}
+.checks{list-style:none;padding:0;margin:10px 0 0}
+.checks li{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.checks li:last-child{border-bottom:none}
+.verdict{font-size:15px;font-weight:700;margin-top:10px}
+.why{background:var(--accent-soft);border-radius:12px;padding:18px 20px;margin-top:40px}
+.why h2{margin-top:0}
+footer{margin-top:48px;font-size:13px;color:var(--muted)}
+.small{font-size:13px;color:var(--muted)}
+details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:600}
+@media (max-width:760px){
+  .tldr{grid-template-columns:1fr}
+  .row2{grid-template-columns:1fr}
+}
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+.ctrl-grid label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.ctrl-grid input{width:100%;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+ul ul{margin:4px 0}
+.brow{display:grid;grid-template-columns:230px 1fr 64px;gap:10px;align-items:center;margin:6px 0;font-size:14px}
+.btrack{background:var(--bg);border:1px solid var(--line);border-radius:6px;height:18px;overflow:hidden}
+.bfill{height:100%}
+.b1{background:var(--muted)} .b2{background:var(--bad)} .b3{background:var(--accent)}
+.bval{font-weight:700;text-align:right}
+.screens{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:14px 0}
+.phone{background:#10131a;border-radius:28px;padding:10px}
+.scr{background:var(--surface);border-radius:20px;min-height:430px;overflow:hidden;display:flex;flex-direction:column}
+.sbar{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:6px}
+.sbar span{font-weight:400;color:var(--muted);font-size:11px;text-align:right}
+.sbody{padding:12px;display:flex;flex-direction:column;gap:9px;font-size:13px}
+.route{font-weight:600;font-size:13px}
+.bubble{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.warnb{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px}
+.slider{display:flex;height:26px;border-radius:999px;overflow:hidden;font-size:11px;color:#fff;font-weight:600}
+.slider .lo{background:#dc2626;flex:1;display:grid;place-items:center}
+.slider .hi{background:#16a34a;flex:3;display:grid;place-items:center}
+.cta{margin-top:auto;background:var(--ink);color:var(--bg);text-align:center;border-radius:12px;padding:10px;font-weight:700}
+.opt{border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column}
+.opt span{color:var(--muted);font-size:12px}
+.hint{margin:0;color:var(--muted);font-size:12px}
+.stars{font-size:18px;letter-spacing:4px}
+.cap{font-size:12px;color:#cbd5e1;text-align:center;margin:8px 4px 2px}
+@media (max-width:760px){.ctrl-grid{grid-template-columns:1fr}.screens{grid-template-columns:1fr}.phone{max-width:320px;margin:0 auto}.brow{grid-template-columns:1fr 64px}.brow .btrack{grid-column:1 / span 2;grid-row:2}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+<p class="kicker">Independent product concept · Aditya Mathur · Oct 2026</p>
+<h1>Confirmed without the nudge: keeping rides confirmed after the CCPA order</h1>
+<p class="lede">The consumer regulator has ordered Rapido to remove pre-ride tips, "add ₹10 to get a ride" prompts and the tilted price slider. Those prompts were how many unaccepted requests got accepted. This is a plan for the Customer Team to keep requests turning into rides without them, and without pressuring the customer.</p>
+
+<div class="meta">
+  <span>Built for: Product Manager, Customer Team, Rapido (Bengaluru)</span>
+  <span>Inside: the order · problem statement · metric · rules · root causes · 4 changes · screens · calculator · experiments · SQL · field plan</span>
+  <span><a href="#calc">Jump to the calculator</a></span>
+</div>
+
+<p class="note">Independent work. Not affiliated with Rapido; no internal data used. All facts are from public reporting and are cited. The screens are my concept mock-ups, not Rapido's app. Calculator inputs are <strong>assumptions</strong> to be replaced with real data. I am not a lawyer: every change here would go through Rapido's legal review.</p>
+
+<div class="tldr">
+  <div class="card"><div class="label">What changed</div><p>On 31 Aug 2026 the CCPA fined Rapido ₹10 lakh and ruled that pre-ride tips, "Captains aren't accepting at ₹60. Try adding +10, +20, +30", and a price slider coloured to push fares up are dark patterns. Tips are allowed only after the ride.</p></div>
+  <div class="card"><div class="label">Why it's hard</div><p>Under the zero-commission model, captains see a request and choose. When the quoted fare is below what nearby captains will accept, the request just sits. The nudge was how the price found its level. Banning the nudge doesn't remove that gap.</p></div>
+  <div class="card"><div class="label">The plan</div><p>Price right the first time, using the price data the old nudges already collected. Give an honest "still looking" screen with real alternatives. Make captains decide before accepting, not after. Move tips to after the ride.</p></div>
+</div>
+
+<h2>1. The facts, from public reporting</h2>
+<div class="tbl"><table>
+<thead><tr><th>Fact</th><th>Detail</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td>Scale</td><td>~5 million rides a day, 400+ cities, ~5 crore active users (Oct 2025)</td><td>Inc42</td></tr>
+<tr><td>Position</td><td>Company estimates (Apr 2025): ~70% of bike taxis, ~40% of autos, ~22% of cabs. Uber's CEO has called Rapido its main India rival.</td><td>Inc42; TechCrunch, May 2026</td></tr>
+<tr><td>Model</td><td>Captains pay a daily subscription instead of a per-ride commission; extended to cabs (2023) and autos (2024)</td><td>Inc42</td></tr>
+<tr><td>Money</td><td>FY25 revenue ₹934 Cr, net loss ₹258 Cr (down 30%). Raised $240M at a $3B valuation in May 2026.</td><td>Inc42; TechCrunch</td></tr>
+<tr><td>CCPA order, Aug 2026</td><td>₹10 lakh penalty. Prompts like <em>"Higher the price, higher the chance of getting a ride"</em> and <em>"Captains aren't accepting at Rs 60. Try adding +10, +20, +30"</em> ruled confirm-shaming. The "Set your price" slider (green for higher, red for lower, more room to raise than to lower) ruled interface interference. Pre-ride tips ruled unfair: a tip acknowledges service already given. Compliance report due in 15 days.</td><td>Newsgram, Inc42, SCC Online, Sep 2026</td></tr>
+<tr><td>CCPA order, Aug 2025</td><td>₹10 lakh penalty for "Auto in 5 min or get ₹50": customers got ₹5 in Rapido coins valid for 7 days. Ordered to pay the full amount.</td><td>Business Standard</td></tr>
+<tr><td>National survey, Aug 2026</td><td>22,000+ responses, 288 districts, <strong>all apps, not Rapido alone</strong>: 82% had a driver cancel on them; 74% said drivers cancelled on learning the payment was digital or the destination didn't suit them; users charged cancellation fees rose from 23% to 45% in two years.</td><td>LocalCircles via Business Standard</td></tr>
+<tr><td>Rules (MVAG 2025)</td><td>Fares up to 2x base at peak, up to 50% off-peak discount; states set base fares. 10% penalty, capped at ₹100, on drivers <em>and</em> riders who cancel without a valid reason; platforms define valid reasons in the app.</td><td>Entrackr</td></tr>
+</tbody></table></div>
+
+<h2>2. The problem statement</h2>
+<p class="card" style="margin:10px 0 16px"><strong>Rapido must remove pre-ride tips, "add ₹X" prompts and the tilted price slider from booking. Those prompts got many otherwise-unaccepted requests accepted. Design a compliant booking flow that keeps the share of booking attempts that become completed rides at least where it is today, without pressuring the customer, and without hurting captain earnings.</strong></p>
+
+<h3>Why the nudge existed (my reading, to verify with data)</h3>
+<ul>
+  <li>Under subscription pricing, Rapido doesn't earn per ride, and captains choose which requests to take. A request quoted below what nearby captains will accept simply waits.</li>
+  <li>The "+₹10" prompt moved the price up until someone accepted. It worked as <strong>price discovery</strong>, but it put the pressure on the customer, after they had already decided to ride.</li>
+  <li>Remove the prompt and the gap is still there. Without a replacement, those requests become "no captain found", retries, or a switch to another app.</li>
+</ul>
+<p><strong>The hidden asset:</strong> every request that was accepted only after a top-up is a record of the price captains would actually accept, for that distance, time and area. Rapido has months of that data. It can be used to set the right price up front.</p>
+
+<h2>3. The metric: request-to-ride rate</h2>
+<p class="card" style="margin:10px 0 16px"><strong>Request-to-ride rate</strong> = completed rides ÷ booking intents. A booking intent is one customer trying to get from A to B: repeated attempts within 10 minutes count once.</p>
+<ul>
+  <li><strong>Why count intents, not attempts:</strong> when a request fails, people retry, often at a higher price. Counting each attempt makes failure look smaller and the nudge look better than it was.</li>
+  <li><strong>Break it down:</strong> request-to-ride = acceptance rate × (1 − cancellation after acceptance) × completion. Each part has a different owner and a different fix.</li>
+  <li><strong>Also track:</strong> time to acceptance (p50 and p90), and wait from acceptance to pickup.</li>
+  <li><strong>Guardrails:</strong> average fare per km (the new flow must not quietly raise prices), captain earnings per online hour (supply must stay healthy), complaints about extra fare or cash demands, and a compliance check: zero pre-ride tip or top-up prompts shown.</li>
+</ul>
+
+<h2>4. What's allowed and what isn't</h2>
+<div class="tbl"><table>
+<thead><tr><th>Practice</th><th>Status</th><th>Basis</th></tr></thead>
+<tbody>
+<tr><td>Tip before or during the ride</td><td><span class="pill p-bad">Not allowed</span></td><td>CCPA order; tip must follow service</td></tr>
+<tr><td>"Add ₹X to improve your chances"</td><td><span class="pill p-bad">Not allowed</span></td><td>CCPA: confirm-shaming</td></tr>
+<tr><td>Price slider styled or ranged to push fares up</td><td><span class="pill p-bad">Not allowed</span></td><td>CCPA: interface interference</td></tr>
+<tr><td>Promising money and paying coins</td><td><span class="pill p-bad">Not allowed</span></td><td>CCPA, Aug 2025</td></tr>
+<tr><td>Tip after the ride</td><td><span class="pill p-good">Allowed</span></td><td>CCPA order</td></tr>
+<tr><td>One upfront fare that varies with demand, within 0.5x to 2x of the state base fare, with surge disclosed</td><td><span class="pill p-warn">Allowed in principle; legal check</span></td><td>MVAG 2025</td></tr>
+<tr><td>Penalty for cancelling without a valid reason (10%, max ₹100)</td><td><span class="pill p-good">Required</span></td><td>MVAG 2025</td></tr>
+</tbody></table></div>
+
+<h2>5. Where requests fail: hypotheses to test first</h2>
+<div class="tbl"><table>
+<thead><tr><th>Segment</th><th>Why captains might skip</th><th>Check</th></tr></thead>
+<tbody>
+<tr><td>Very short trips (under 2 km)</td><td>Low fare for the same pickup effort</td><td>Acceptance and top-ups by distance band</td></tr>
+<tr><td>Drops in low-demand areas</td><td>No return ride: the captain drives back empty</td><td>Acceptance by drop zone's demand in the next 30 minutes</td></tr>
+<tr><td>Digital payment</td><td>74% of surveyed users say drivers cancel over payment or destination</td><td>Post-acceptance cancellations by payment mode</td></tr>
+<tr><td>Peak hours and rain</td><td>Captains have more choice than requests</td><td>Acceptance by hour and weather</td></tr>
+<tr><td>Hard pickups</td><td>Gated campuses, one-way roads, metro exits with no stopping</td><td>Acceptance and pickup time by pickup point</td></tr>
+</tbody></table></div>
+
+<h2>6. Four changes</h2>
+<div class="flow">
+  <div class="step"><div class="num">1</div><div><p class="t">One honest price, right the first time</p><p>For segments where requests were routinely accepted only after a top-up, set the upfront fare closer to the price captains actually accepted, staying within the MVAG band and showing a clear "high demand" note when it applies. The customer sees one price, decided before they book. No prompts later. This replaces pressure with accurate pricing, using data Rapido already has.</p></div></div>
+  <div class="step"><div class="num">2</div><div><p class="t">An honest "still looking" screen</p><p>If no captain has accepted after about 30 to 45 seconds, show neutral, useful choices with equal visual weight, ordered by expected wait: keep waiting (with a real time estimate), switch to another vehicle (with its real fare and time), move the pickup to a nearby main road where captains accept more often, or cancel for free. No colour that pushes the pricier option, no claims about chances unless they come from real data.</p></div></div>
+  <div class="step"><div class="num">3</div><div><p class="t">Captains decide before accepting, not after</p><p>Show captains the drop area and payment mode <em>before</em> they accept, so they skip instead of accepting and cancelling later. A customer gets a quick "no captain yet" instead of an 8-minute wait ending in a cancellation. After acceptance, an unjustified captain cancellation triggers the MVAG penalty, an automatic priority re-match, and compensation paid in money, not coins.</p></div></div>
+  <div class="step"><div class="num">4</div><div><p class="t">Tips after the ride, and only then</p><p>A simple optional tip screen at the end of the trip, with 100% going to the captain. Captains keep a way to earn more for good service; customers tip for service they've had, not to buy a ride.</p></div></div>
+</div>
+<p><strong>The trade-off I'd accept:</strong> change 3 will lower raw acceptance a little, because captains can now skip trips they would have cancelled. That's the point: a fast "no" beats a slow "yes" followed by a cancellation. The request-to-ride rate is what decides whether it's worth it.</p>
+
+<h2>7. Concept screens</h2>
+<p>My mock-ups to show the difference. Not Rapido's app, no real data.</p>
+<div class="screens">
+  <div class="phone"><div class="scr">
+    <div class="sbar">Before <span>as described in the CCPA order</span></div>
+    <div class="sbody">
+      <div class="route">HSR Layout → Koramangala 5th Block</div>
+      <div class="bubble warnb">Captains aren't accepting at ₹60. Try adding +10, +20, +30</div>
+      <div class="chips"><span>+₹10</span><span>+₹20</span><span>+₹30</span></div>
+      <div class="slider"><div class="lo">Lower</div><div class="hi">Higher, faster</div></div>
+      <div class="bubble">Add a tip to get your ride faster</div>
+      <div class="cta">Find captain · ₹60</div>
+    </div>
+  </div><p class="cap">Pressure after the decision: pay more or wait.</p></div>
+  <div class="phone"><div class="scr">
+    <div class="sbar">After <span>no captain yet · 40s</span></div>
+    <div class="sbody">
+      <div class="route">HSR Layout → Koramangala 5th Block · ₹72</div>
+      <p class="hint">Still looking. Here are your options:</p>
+      <div class="opt"><b>Keep waiting</b><span>usually 2 to 4 min more</span></div>
+      <div class="opt"><b>Switch to Auto</b><span>₹96 · captain about 3 min away</span></div>
+      <div class="opt"><b>Pick up from main road</b><span>2 min walk · captains accept more here</span></div>
+      <div class="opt"><b>Cancel</b><span>free, no charge</span></div>
+    </div>
+  </div><p class="cap">One price up front; real choices with equal weight.</p></div>
+  <div class="phone"><div class="scr">
+    <div class="sbar">After <span>ride complete</span></div>
+    <div class="sbody">
+      <div class="route">You've arrived · ₹72 paid by UPI</div>
+      <p class="hint">How was your ride with Ravi?</p>
+      <div class="stars">★ ★ ★ ★ ★</div>
+      <p class="hint">Add a tip? Optional. 100% goes to Ravi.</p>
+      <div class="chips"><span>₹10</span><span>₹20</span><span>₹30</span><span>No tip</span></div>
+      <div class="cta">Done</div>
+    </div>
+  </div><p class="cap">Tip for service received, never to get a ride.</p></div>
+</div>
+
+<h2 id="calc">8. Calculator: what the replacements must recover</h2>
+<p>Per 10,000 booking intents. Every input is an <span class="pill p-warn">assumption</span>; the real values come from SQL queries 1 and 2 below. The question it answers: once the nudge is gone, how much must the new changes recover just to stand still?</p>
+<div class="grader">
+  <div class="ctrl-grid">
+    <label>Accepted with no nudge (%) <input type="number" id="k_a" step="1"></label>
+    <label>Of the rest, accepted after a top-up or tip prompt (%) <input type="number" id="k_n" step="1"></label>
+    <label>Cancelled after acceptance (%) <input type="number" id="k_c" step="1"></label>
+    <label>Change 1: unaccepted requests that upfront pricing recovers (%) <input type="number" id="k_p" step="1"></label>
+    <label>Change 2: remaining unaccepted that "still looking" converts (%) <input type="number" id="k_s" step="1"></label>
+    <label>Change 3: cut in post-acceptance cancellations (%) <input type="number" id="k_z" step="1"></label>
+    <label>Change 3: drop in raw acceptance, points <input type="number" id="k_w" step="0.5"></label>
+  </div>
+  <div id="kOut"></div>
+</div>
+
+<h2>9. How I'd test it</h2>
+<ul>
+  <li><strong>Change 2 (the "still looking" screen):</strong> a normal user-level A/B test is fine. It changes what one customer sees and barely affects captain supply.</li>
+  <li><strong>Changes 1 and 3 (pricing, what captains see):</strong> these change captain behaviour, and captains serve both groups. A user-level test would leak between groups. Use a <strong>switchback</strong>: each zone flips between old and new in 30 to 60 minute windows, balanced across hours and days, ignoring the first 10 minutes after each switch.</li>
+  <li><strong>Removing the nudge itself is not an experiment.</strong> It's a legal requirement and ships everywhere. What gets tested is the replacements.</li>
+  <li><strong>Primary:</strong> request-to-ride rate per intent. <strong>Guardrails:</strong> fare per km, captain earnings per online hour, extra-fare complaints, compliance count of zero.</li>
+</ul>
+
+<h2>10. SQL</h2>
+<details open><summary>1. The funnel per booking intent (retries within 10 minutes count once)</summary>
+<pre>WITH attempts AS (
+  SELECT r.*,
+         LAG(r.requested_at) OVER (PARTITION BY r.customer_id ORDER BY r.requested_at) AS prev_at
+  FROM ride_requests r
+  WHERE r.requested_at &gt;= CURRENT_DATE - 14
+),
+marked AS (
+  SELECT *,
+         CASE WHEN prev_at IS NULL OR requested_at &gt; prev_at + INTERVAL '10 minutes' THEN 1 ELSE 0 END AS new_intent
+  FROM attempts
+),
+intents AS (
+  SELECT *,
+         SUM(new_intent) OVER (PARTITION BY customer_id ORDER BY requested_at) AS intent_no
+  FROM marked
+),
+per_intent AS (
+  SELECT customer_id, intent_no,
+         MIN(city)          AS city,
+         MIN(vehicle_type)  AS first_vehicle,
+         COUNT(*)           AS attempts,
+         BOOL_OR(accepted_at IS NOT NULL)          AS accepted,
+         BOOL_OR(status = 'CANCELLED_BY_CAPTAIN')  AS captain_cancelled,
+         BOOL_OR(status = 'COMPLETED')             AS completed
+  FROM intents
+  GROUP BY customer_id, intent_no
+)
+SELECT city, first_vehicle,
+       COUNT(*)                                                     AS intents,
+       ROUND(AVG(attempts), 2)                                      AS attempts_per_intent,
+       ROUND(100.0 * AVG(CASE WHEN accepted THEN 1 ELSE 0 END), 1)  AS accepted_pct,
+       ROUND(100.0 * AVG(CASE WHEN captain_cancelled THEN 1 ELSE 0 END), 1) AS captain_cancel_pct,
+       ROUND(100.0 * AVG(CASE WHEN completed THEN 1 ELSE 0 END), 1) AS request_to_ride_pct
+FROM per_intent
+GROUP BY city, first_vehicle
+ORDER BY request_to_ride_pct;</pre></details>
+
+<details><summary>2. The price captains actually accepted, from past top-ups (input to change 1)</summary>
+<pre>-- Every request accepted only after a top-up shows the price captains would take.
+WITH nudged AS (
+  SELECT city, vehicle_type,
+         CASE WHEN est_distance_km &lt; 2  THEN '0-2 km'
+              WHEN est_distance_km &lt; 5  THEN '2-5 km'
+              WHEN est_distance_km &lt; 10 THEN '5-10 km'
+              ELSE '10+ km' END                   AS distance_band,
+         EXTRACT(HOUR FROM requested_at)          AS hour,
+         drop_zone_id,
+         quoted_fare,
+         fare_at_acceptance - quoted_fare         AS top_up
+  FROM ride_requests
+  WHERE accepted_at IS NOT NULL
+    AND fare_at_acceptance &gt; quoted_fare
+    AND requested_at &gt;= DATE '2026-06-01'
+    AND requested_at &lt;  DATE '2026-09-01'
+)
+SELECT city, vehicle_type, distance_band, hour,
+       COUNT(*)                                                    AS topped_up_rides,
+       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY top_up)         AS median_top_up,
+       ROUND((AVG(top_up / NULLIF(quoted_fare, 0)) * 100)::numeric, 1) AS avg_top_up_pct
+FROM nudged
+GROUP BY city, vehicle_type, distance_band, hour
+HAVING COUNT(*) &gt;= 50
+ORDER BY avg_top_up_pct DESC;</pre></details>
+
+<details><summary>3. Cancellations after acceptance: why and how late</summary>
+<pre>SELECT vehicle_type,
+       payment_mode,
+       cancel_reason_code,
+       COUNT(*) AS cancellations,
+       PERCENTILE_CONT(0.5) WITHIN GROUP (
+         ORDER BY EXTRACT(EPOCH FROM (cancelled_at - accepted_at)) / 60) AS median_min_after_accept
+FROM ride_requests
+WHERE status = 'CANCELLED_BY_CAPTAIN'
+  AND accepted_at IS NOT NULL
+  AND requested_at &gt;= CURRENT_DATE - 14
+GROUP BY vehicle_type, payment_mode, cancel_reason_code
+ORDER BY cancellations DESC;</pre></details>
+
+<details><summary>4. Compliance check: pre-ride tip or top-up prompts must be zero</summary>
+<pre>SELECT DATE(shown_at) AS day,
+       prompt_type,
+       app_version,
+       COUNT(*)       AS times_shown
+FROM ui_prompt_events
+WHERE prompt_type IN ('PRE_RIDE_TIP', 'FARE_TOP_UP', 'SET_YOUR_PRICE_SLIDER')
+  AND ride_state IN ('SEARCHING', 'ACCEPTED', 'IN_TRIP')
+  AND shown_at &gt;= CURRENT_DATE - 7
+GROUP BY DATE(shown_at), prompt_type, app_version
+ORDER BY day, times_shown DESC;
+-- Any row after go-live is a bug or an old app version still in use.</pre></details>
+
+<details><summary>5. What customers do on the "still looking" screen</summary>
+<pre>SELECT city,
+       choice,                         -- KEEP_WAITING, SWITCH_VEHICLE, MOVE_PICKUP, CANCEL
+       COUNT(*)                        AS customers,
+       ROUND(100.0 * AVG(CASE WHEN intent_completed THEN 1 ELSE 0 END), 1) AS went_on_to_ride_pct,
+       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY seconds_to_accept_after_choice) AS median_sec_to_accept
+FROM still_looking_events
+WHERE shown_at &gt;= CURRENT_DATE - 14
+GROUP BY city, choice
+ORDER BY city, customers DESC;</pre></details>
+
+<h2>11. Field research: week one</h2>
+<p>The data says <em>where</em> requests fail. Only the field says <em>why</em>.</p>
+<ul>
+  <li><strong>Take 20 rides</strong> across bike and auto, peak and off-peak, cash and UPI, short and long, and log every acceptance time, captain call and cancellation.</li>
+  <li><strong>Talk to 15 captains</strong> at 3 hubs (a metro station, a tech park, a market):
+    <ul>
+      <li>When a request comes in, what do you look at first?</li>
+      <li>What makes you skip one? What makes you accept and then cancel?</li>
+      <li>What did a ₹10 or ₹20 top-up actually change for you?</li>
+      <li>Would seeing the drop area and payment mode before accepting change what you do?</li>
+    </ul></li>
+  <li><strong>Talk to 10 customers</strong> at metro exits right after a failed or slow booking: what did they do next, and which app did they open?</li>
+</ul>
+
+<h2>12. Using AI to make the team faster</h2>
+<ul>
+  <li><strong>Read every complaint, not a sample:</strong> use an LLM to tag free-text complaints and cancellation notes into a fixed list (extra fare demanded, cash demanded, asked to cancel, wrong pickup, safety). Check it on 200 hand-labelled tickets first, and only trust it if it agrees with people most of the time.</li>
+  <li><strong>Weekly signal:</strong> a short weekly summary of what's rising by city and vehicle type, so the team sees a new problem in days, not after a regulator does.</li>
+</ul>
+
+<h2>13. Risks I'd watch</h2>
+<ul>
+  <li><strong>Upfront prices go up for some trips.</strong> Some customers will book less. The fare-per-km guardrail and the switchback test decide whether the trade is worth it.</li>
+  <li><strong>Captain earnings drop</strong> if top-ups disappear and nothing replaces them. Watch earnings per online hour; under the subscription model, captains who earn too little stop logging in.</li>
+  <li><strong>Old app versions</strong> keep showing banned prompts. Force-update or switch them off server-side; SQL query 4 catches it.</li>
+  <li><strong>"Still looking" claims need data.</strong> Saying "captains accept more here" must be backed by real numbers, or it becomes the next dark-pattern finding.</li>
+</ul>
+
+<h2>14. What I'd ask in week one</h2>
+<ul>
+  <li>What share of completed rides last quarter needed a top-up or tip before acceptance? That's the size of the hole.</li>
+  <li>Which segments needed the biggest top-ups?</li>
+  <li>Do captains already see the drop area and payment mode before accepting, for each vehicle type?</li>
+  <li>What does legal consider a compliant upfront demand price, and how must it be disclosed?</li>
+  <li>How are cancellation penalties and compensation paid today: money or coins?</li>
+</ul>
+
+<div class="why">
+  <h2>Why I built this</h2>
+  <p>I'm applying for the Product Manager role on Rapido's Customer Team. As Associate PM at EnKash I owned the payment side of the moment a customer commits: checkout, payment status, refunds and reconciliation. I shipped a fix for an enterprise merchant whose UPI QR expired every 5 minutes and was losing customers at the point of paying. At Stripe I worked in fraud and compliance, where the rule was simple: if a flow only works because it pressures people, it won't survive review. I'd also written a teardown of cancellations in Namma Yatri's zero-commission model before this, so I came to this problem already curious about it.</p>
+  <p><strong>Aditya Mathur</strong> · Bengaluru · <a href="mailto:adityamathur2004@gmail.com">adityamathur2004@gmail.com</a> · <a href="https://www.linkedin.com/in/adityaamathur">LinkedIn</a> · <a href="https://adimathur-creates.github.io">Portfolio</a> · Related: <a href="https://aditya-namma-yatri-reliability.netlify.app">Namma Yatri reliability teardown</a></p>
+</div>
+
+<footer>Sources, checked 1 Oct 2026: <a href="https://www.newsgram.com/india/2026/09/16/ccpa-fines-rapido-dark-patterns-fare-tipping-practices">Newsgram</a>, <a href="https://inc42.com/buzz/ccpa-penalises-rapido-over-advanced-tipping-prompts/">Inc42</a> and <a href="https://www.scconline.com/blog/post/2026/09/28/ccpa-rapido-pre-ride-tipping-prompts-10-lakh-penalty/">SCC Online</a> on the Aug 2026 CCPA order; <a href="https://www.business-standard.com/companies/news/ccpa-fine-rapido-bike-auto-service-cashback-fake-advertising-guaranteed-125082001548_1.html">Business Standard</a> on the Aug 2025 order; <a href="https://www.business-standard.com/india-news/app-taxi-users-back-maharashtra-style-penalty-for-driver-cancellations-126080300462_1.html">Business Standard</a> on the LocalCircles survey; <a href="https://entrackr.com/news/govt-revises-ride-hailing-rules-2x-surge-cap-cancellation-fee-and-push-for-bike-taxis-9455586">Entrackr</a> on MVAG 2025; <a href="https://inc42.com/features/how-rapidos-super-app-model-is-taking-shape/">Inc42</a> on scale, model and financials; <a href="https://techcrunch.com/2026/05/15/indian-uber-rival-rapido-raises-240m-at-3b-valuation/">TechCrunch</a> on the 2026 round. The analysis, screens, calculator, SQL and plans are my own.</footer>
+</div>
+
+<script>
+
+const $ = s => document.querySelector(s);
+const K = {a:70, n:40, c:15, p:35, s:25, z:30, w:3};
+const n0 = x => Math.round(x).toLocaleString('en-IN');
+function model(k, pOverride){
+  const a=k.a/100, n=k.n/100, c=k.c/100, p=(pOverride ?? k.p)/100, s=k.s/100, z=k.z/100, w=k.w/100;
+  const before = (a + (1-a)*n) * (1-c);
+  const removed = a * (1-c);
+  const a2 = Math.max(0, a - w), u = 1 - a2;
+  const acc = a2 + u*p + u*(1-p)*s;
+  const after = acc * (1 - c*(1-z));
+  return {before: before*10000, removed: removed*10000, after: after*10000};
+}
+function breakevenP(k){
+  if(model(k,100).after < model(k).before) return null;
+  let lo=0, hi=100; for(let i=0;i<40;i++){ const m=(lo+hi)/2; if(model(k,m).after >= model(k).before) hi=m; else lo=m; } return hi;
+}
+function calc(){
+  Object.keys(K).forEach(x=>{ const v=parseFloat($('#k_'+x).value); if(!isNaN(v)) K[x]=Math.max(0, Math.min(100, v)); });
+  const m = model(K), be = breakevenP(K), max = Math.max(m.before, m.removed, m.after);
+  const bar = (label, v, cls) => `<div class="brow"><div class="blab">${label}</div><div class="btrack"><div class="bfill ${cls}" style="width:${(v/max*100).toFixed(1)}%"></div></div><div class="bval">${n0(v)}</div></div>`;
+  let h = '<p class="small" style="margin:14px 0 6px">Completed rides per 10,000 booking intents</p>';
+  h += bar('With the nudge (before the order)', m.before, 'b1');
+  h += bar('Nudge removed, nothing replaces it', m.removed, 'b2');
+  h += bar('Nudge removed, changes 1 to 3 live', m.after, 'b3');
+  const lost = m.before - m.removed, net = m.after - m.before;
+  const notes = [];
+  notes.push(`Removing the nudge alone loses about <strong>${n0(lost)}</strong> rides per 10,000 intents (${(lost/m.before*100).toFixed(0)}%). At Rapido's ~5 million rides a day, even a fraction of that is a large number, which is why this can't be treated as just a compliance task.`);
+  notes.push(net >= 0 ? `With these assumptions, the changes recover the loss and add <strong>${n0(net)}</strong> rides per 10,000. Check which input drives it before believing it.` : `With these assumptions, the changes still leave a gap of <strong>${n0(-net)}</strong> rides per 10,000.`);
+  notes.push(be === null ? `Even if upfront pricing recovered every unaccepted request, the other inputs can't close the gap. Look at cancellations after acceptance first.` : `<strong>Break-even:</strong> with the other inputs as set, upfront pricing has to recover at least <strong>${be.toFixed(0)}%</strong> of unaccepted requests just to match the old funnel. That's the number to check against SQL query 2.`);
+  h += '<ul class="small">'+notes.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+  $('#kOut').innerHTML = h;
+}
+Object.keys(K).forEach(x=>{ const el=$('#k_'+x); el.value=K[x]; el.oninput=calc; });
+calc();
+
+</script>
+</body>
+</html>
